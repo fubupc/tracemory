@@ -1,9 +1,10 @@
 import "./App.css";
+import MapView from "./components/MapView";
 
 function App() {
   return (
     <main class="container">
-      <h1>Tracemory</h1>
+      <MapView />
     </main>
   );
 }
