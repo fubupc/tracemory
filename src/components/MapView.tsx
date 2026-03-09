@@ -2,13 +2,10 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { onMount, onCleanup } from "solid-js";
 import * as tauriGeolocation from "@tauri-apps/plugin-geolocation";
+import { isMobilePlatform } from "../lib/platform";
 
 const DEFAULT_CENTER: [number, number] = [116.4, 39.9];
 const DEFAULT_ZOOM = 12;
-
-function isTauri(): boolean {
-  return "__TAURI_INTERNALS__" in window;
-}
 
 async function getTauriPosition(): Promise<[number, number]> {
   let status = await tauriGeolocation.checkPermissions();
@@ -32,7 +29,7 @@ function getBrowserPosition(): Promise<[number, number]> {
 }
 
 async function getUserPosition(): Promise<[number, number]> {
-  if (isTauri()) {
+  if (isMobilePlatform) {
     return getTauriPosition();
   }
   return getBrowserPosition();
