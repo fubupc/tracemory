@@ -1,8 +1,9 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { onMount, onCleanup } from "solid-js";
+import { createEffect, onCleanup, onMount } from "solid-js";
 import * as tauriGeolocation from "@tauri-apps/plugin-geolocation";
 import { isMobilePlatform } from "../lib/platform";
+import { trackPoints } from "../stores/recording";
 
 const DEFAULT_CENTER: [number, number] = [116.4, 39.9];
 const DEFAULT_ZOOM = 12;
@@ -47,6 +48,28 @@ function MapView() {
       zoom: DEFAULT_ZOOM,
     });
 
+    map.on("load", () => {
+      map.addSource("track", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: "track-line",
+        type: "line",
+        source: "track",
+        paint: {
+          "line-color": "#ef4444",
+          "line-width": 4,
+          "line-opacity": 0.85,
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+      });
+    });
+
     try {
       const center = await getUserPosition();
       map.setCenter(center);
@@ -54,6 +77,30 @@ function MapView() {
     } catch (e) {
       console.warn("Failed to get user position, using default:", e);
     }
+  });
+
+  createEffect(() => {
+    const points = trackPoints();
+    if (!map || !map.getSource("track")) return;
+
+    const source = map.getSource("track") as maplibregl.GeoJSONSource;
+    if (points.length < 2) {
+      source.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    source.setData({
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: points.map((p) => [p.lng, p.lat]),
+      },
+      properties: {},
+    });
+
+    // Pan to latest point while recording
+    const last = points[points.length - 1];
+    map.panTo([last.lng, last.lat]);
   });
 
   onCleanup(() => map?.remove());
